@@ -11,41 +11,41 @@ using std::cout;
 using std::cerr;
 using std::endl;
 
-namespace sequoiaortho {
+namespace fmvg {
 
-time_t Photo::getDateTime() {
+time_t Photo::getDateTime() const {
     return datetime_;
 }  // Photo::getDateTime()
 
-int Photo::getPixelDimX() {
+int Photo::getPixelDimX() const {
     return pixel_dimension_x_;
 }  // Photo::getPixelDimX()
 
-int Photo::getPixelDimY() {
+int Photo::getPixelDimY() const {
     return pixel_dimension_y_;
 }  // Photo::getPixelDimY()
 
-cv::Size Photo::getPixelDims() {
+cv::Size Photo::getPixelDims() const {
     return cv::Size(pixel_dimension_x_, pixel_dimension_y_);
 }  // Photo::getPixelDims()
 
-double Photo::getFocalLengthInit() {
+double Photo::getFocalLengthInit() const {
     return focal_length_init_;
 }  // Photo::getFocalLengthInit()
 
-double Photo::getGPSLatitude() {
+double Photo::getGPSLatitude() const {
     return gps_latitude_;
 }  // Photo::getGPSLatitude()
 
-double Photo::getGPSLongitude() {
+double Photo::getGPSLongitude() const {
     return gps_longitude_;
 }  // Photo::getGPSLongitude()
 
-double Photo::getGPSAltitude() {
+double Photo::getGPSAltitude() const {
     return gps_altitude_;
 }  // Photo::getGPSAltitude()
 
-cv::Mat Photo::getMat() {
+cv::Mat Photo::getMat() const {
     return mat_;
 }  // Photo::getMat()
 
@@ -146,4 +146,4 @@ bool Photo::readFromFile(std::string file_path) {
     return true;
 }  // Photo::readFromFile
 
-}  // namespace sequoiaortho
+}  // namespace fmvg

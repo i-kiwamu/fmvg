@@ -1,7 +1,7 @@
-#ifndef PREPARATION_H
-#define PREPARATION_H
+#ifndef FMVG_PREPARATION_H_
+#define FMVG_PREPARATION_H_
 
-namespace sequoiaortho {
+namespace fmvg {
 
 class Photo {
     // data members
@@ -37,18 +37,18 @@ public:
         else return false;
     }  // operator==
 
-    time_t getDateTime();
-    int getPixelDimX();
-    int getPixelDimY();
-    cv::Size getPixelDims();
-    double getFocalLengthInit();
-    double getGPSLongitude();
-    double getGPSLatitude();
-    double getGPSAltitude();
-    cv::Mat getMat();
+    time_t getDateTime() const;
+    int getPixelDimX() const;
+    int getPixelDimY() const;
+    cv::Size getPixelDims() const;
+    double getFocalLengthInit() const;
+    double getGPSLongitude() const;
+    double getGPSLatitude() const;
+    double getGPSAltitude() const;
+    cv::Mat getMat() const;
     bool readFromFile(std::string file_path);
 };  // class Photo
 
-}  // namespace sequoiaortho
+}  // namespace fmvg
 
-#endif
+#endif  // FMVG_PREPARATION_H_
