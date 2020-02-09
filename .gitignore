@@ -1,5 +1,7 @@
 # Prerequisites
 *.d
+**/.DS_Store
+.vscode/**/*
 
 # Compiled Object files
 *.slo
@@ -30,3 +32,21 @@
 *.exe
 *.out
 *.app
+
+# CMake build
+build/**/*
+**/cmake-build-debug
+**/CMakeCache.txt
+**/cmake_install.cmake
+**/install_manifest.txt
+**/CMakeFiles/
+**/CTestTestfile.cmake
+**/Makefile
+**/*.cbp
+**/CMakeScripts
+**/compile_commands.json
+
+# test photos
+test/photos/**/*
+test/photos/RGB/*.JPG
+test/photos/Singles/*.TIF
