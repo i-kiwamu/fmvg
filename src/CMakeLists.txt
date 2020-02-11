@@ -1,6 +1,6 @@
 # Shared library
 add_library(fmvg SHARED
-    preparation.cc
+    photo.cc
     matcher.cc
 )
 

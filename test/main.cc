@@ -6,7 +6,8 @@
 // #include <vector>
 // #include <unordered_map>
 #include <opencv2/opencv.hpp>
-#include "preparation.h"
+#include <exiv2/exiv2.hpp>
+#include "photo.h"
 #include "matcher.h"
 
 // namespace fs = std::filesystem;
@@ -50,6 +51,16 @@ int main(int argc, char** argv) {
                 if (suffix == ".JPG" | suffix == ".TIF") {
                     fmvg::Photo photo;
                     photo.readFromFile(dir_path + "/" + path_str);
+                    cout << path_str << endl;
+                    cout << "  Datetime: " << photo.getDateTime() << endl;
+                    cout << "  Pixel dims: " << photo.getPixelDims() << endl;
+                    cout << "  GPS: (" << photo.getGPSLatitude() << ", "
+                        << photo.getGPSLongitude() << ", "
+                        << photo.getGPSAltitude() << ")" << endl;
+                    cout << "  Model type: " << photo.getModelType() << endl;
+                    cout << "  Pixel focal length: " << photo.getPixelFocalLengths() << endl;
+                    cout << "  Principal point: " << photo.getPrincipalPoint() << endl;
+                    cout << "  Distortion coefficients: " << photo.getDistortionCoefficients() << endl;
                     input_photos.push_back(photo);
                 }
             }

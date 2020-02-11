@@ -2,8 +2,9 @@
 #include <vector>
 #include <unordered_map>
 #include <opencv2/opencv.hpp>
+#include <exiv2/exiv2.hpp>
 
-#include "preparation.h"
+#include "photo.h"
 #include "matcher.h"
 
 namespace fmvg {
