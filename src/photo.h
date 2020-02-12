@@ -20,12 +20,6 @@ class Photo {
     bool setGPSAltitude(const Exiv2::ExifData& exifData);
 
 public:
-    // constructor
-    Photo() {}
-    Photo(const std::string& file_path) {
-        readFromFile(file_path);
-    }
-    
     // definition equality & relational operators
     bool operator==(const Photo& p) const {
         bool test = datetime_ == p.datetime_ &&
@@ -52,6 +46,12 @@ public:
     cv::Mat getMat() const;
     bool readExifData(const Exiv2::ExifData& exifData);
     bool readFromFile(const std::string& file_path);
+
+    // constructor
+    Photo() {}
+    Photo(const std::string& file_path) {
+        readFromFile(file_path);
+    }
 };  // class Photo
 
 class PhotoList {
@@ -80,7 +80,7 @@ public:
     bool operator==(const PhotoList& pl) const {
         return photo_vector_ == pl.photo_vector_ &&
             model_type_ == pl.model_type_ &&
-            pixel_per_mm_ && pl.pixel_per_mm_ &&
+            pixel_per_mm_ == pl.pixel_per_mm_ &&
             pixel_focal_lengths_ == pl.pixel_focal_lengths_ &&
             principal_point_ == pl.principal_point_ &&
             distortion_coefficients_ == pl.distortion_coefficients_;
@@ -103,7 +103,7 @@ public:
     cv::Vec2d getPrincipalPoint() const;
     cv::Vec6d getDistortionCoefficients() const;
     bool readXmpData(const Exiv2::ExifData& exifData, const Exiv2::XmpData& xmpData);
-    bool readFromDir(const std::string& dir_path);
+    bool readFromFiles(const std::vector<std::string>);
 };  // class PhotoList
 
 }  // namespace fmvg

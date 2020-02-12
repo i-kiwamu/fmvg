@@ -1,10 +1,9 @@
 #include <iostream>
-// #include <filesystem>
 #include <dirent.h>  // find files in a directory
 #include <string>
 #include <time.h>
-// #include <vector>
-// #include <unordered_map>
+#include <vector>
+#include <unordered_map>
 #include <opencv2/opencv.hpp>
 #include <exiv2/exiv2.hpp>
 #include "photo.h"
@@ -16,57 +15,45 @@ using std::cerr;
 using std::endl;
 
 int main(int argc, char** argv) {
-    if (argc != 2) {
-        cerr << "ERROR: The program requires only one argument of directory to contain images!" << endl;
+    if (argc == 1) {
+        cerr << "ERROR: The program requires more than one argument of directory to contain images!" << endl;
         return 1;
     }
 
     // read image files
-    fmvg::PhotoList input_photos;
+    fmvg::PhotoList photos;
+    std::vector<std::string> args(argv, argv + argc);
+    args.erase(args.begin());  // remove program file name
 
-    // C++17
-    // for(auto& p : fs::directory_iterator(argv[1])) {
-    //     fs::path path = p.path();
-    //     if (fs::is_regular_file(path)) {
-    //         std::string path_str = path.string();
-    //         std::string suffix = path_str.substr(path_str.size() - 4);
-    //         if (suffix == ".JPG" | suffix == ".TIF") {
-    //             input_imgs.push_back(cv::imread(path_str, -1));
-    //         }
+    photos.readFromFiles(args);
+    cout << "Photo list" << endl;
+    cout << "  Number of photos: " << photos.getPhotoVector().size() << endl;
+    cout << "  Model type: " << photos.getModelType() << endl;
+    cout << "  Pixel focal length: " << photos.getPixelFocalLengths() << endl;
+    cout << "  Principal point: " << photos.getPrincipalPoint() << endl;
+    cout << "  Distortion coefficients: " << photos.getDistortionCoefficients() << endl;
+    cout << endl;
+    for (auto p = photos.begin(); p != photos.end(); ++p) {
+        cout << "Date&time: " << p->getDateTime() << endl;
+        cout << "Pixel dimensions: " << p->getPixelDims() << endl;
+        cout << "GPS: (" << p->getGPSLatitude() << ", "
+             << p->getGPSLongitude() << ", "
+             << p->getGPSAltitude() << ")" << endl;
+        cout << endl;
+    }
+
+    // // matches
+    // std::unordered_map<int, std::vector<cv::DMatch>> all_matches = fmvg::matcher(photos);
+
+    // // show all matches
+    // for (const auto& d : all_matches) {
+    //     int j = d.first % n_photos;
+    //     int i = (d.first - j) / n_photos;
+    //     cout << i << "-" << j << endl;
+    //     for (const auto& x : d.second) {
+    //         cout << "  " << x.queryIdx << " --> " << x.trainIdx << endl;
     //     }
     // }
-    // C++11
-    input_photos.readFromDir(argv[1]);
-    cout << "Photo list" << endl;
-    std::size_t n_photos = input_photos.getPhotoVector().size();
-    cout << "  Number of photos: " << n_photos << endl;
-    cout << "  Model type: " 
-         << input_photos.getModelType() << endl;
-    cout << "  Pixel focal length: "
-         << input_photos.getPixelFocalLengths() << endl;
-    cout << "  Principal point: "
-         << input_photos.getPrincipalPoint() << endl;
-    cout << "  Distortion coefficients: "
-         << input_photos.getDistortionCoefficients() << endl;
-    for (std::size_t i = 0; i < n_photos; ++i) {
-        cout << "Photo #" << i << endl;
-        cout << "  Date time: " << endl;
-    }
-
-    // matches
-    std::vector<fmvg::Photo> photos = input_photos.getPhotoVector();
-    std::unordered_map<int, std::vector<cv::DMatch>> all_matches = fmvg::matcher(photos);
-
-    // show all matches
-    for (const auto& d : all_matches) {
-        int n_photos = photos.size();
-        int j = d.first % n_photos;
-        int i = (d.first - j) / n_photos;
-        cout << i << "-" << j << endl;
-        for (const auto& x : d.second) {
-            cout << "  " << x.queryIdx << " --> " << x.trainIdx << endl;
-        }
-    }
 
     return 0;
 }

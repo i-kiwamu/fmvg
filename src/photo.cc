@@ -85,7 +85,7 @@ double Photo::getGPSLatitude() const {
 bool Photo::setGPSLatitude(const Exiv2::ExifData& exifData) {
     gps_latitude_ = 0.0;
     Exiv2::ExifData::const_iterator pos_e = \
-        pos_e = exifData.findKey(ekey("Exif.GPSInfo.GPSLatitude"));
+        exifData.findKey(ekey("Exif.GPSInfo.GPSLatitude"));
     if (pos_e == exifData.end()) {
         cerr << "ERROR: Exif.GPSInfo.GPSLatitude was not found!" << endl;
         return false;
@@ -107,7 +107,7 @@ double Photo::getGPSLongitude() const {
 bool Photo::setGPSLongitude(const Exiv2::ExifData& exifData) {
     gps_longitude_ = 0.0;
     Exiv2::ExifData::const_iterator pos_e = \
-        pos_e = exifData.findKey(ekey("Exif.GPSInfo.GPSLongitude"));
+        exifData.findKey(ekey("Exif.GPSInfo.GPSLongitude"));
     if (pos_e == exifData.end()) {
         cerr << "ERROR: Exif.GPSInfo.GPSLongitude was not found!" << endl;
         return false;
@@ -129,7 +129,7 @@ double Photo::getGPSAltitude() const {
 bool Photo::setGPSAltitude(const Exiv2::ExifData& exifData) {
     gps_altitude_ = 0.0;
     Exiv2::ExifData::const_iterator pos_e = \
-        pos_e = exifData.findKey(ekey("Exif.GPSInfo.GPSAltitude"));
+        exifData.findKey(ekey("Exif.GPSInfo.GPSAltitude"));
     if (pos_e == exifData.end()) {
         cerr << "ERROR: Exif.GPSInfo.GPSAltitude was not found!" << endl;
         return false;
@@ -219,7 +219,7 @@ std::string PhotoList::getModelType() const {
 
 bool PhotoList::setModelType(const Exiv2::XmpData& xmpData) {
     Exiv2::XmpData::const_iterator pos_x = \
-        pos_x = xmpData.findKey(xkey("Xmp.Camera.ModelType"));
+        xmpData.findKey(xkey("Xmp.Camera.ModelType"));
     if (pos_x == xmpData.end()) {
         cerr << "ERROR: Xmp.Camera.ModelType was not found!" << endl;
         return false;
@@ -238,7 +238,7 @@ cv::Vec2d PhotoList::getPixelPerMM() const {
 bool PhotoList::setPixelPerMM(const Exiv2::ExifData& exifData) {
     // x-axis
     Exiv2::ExifData::const_iterator pos_e = \
-        pos_e = exifData.findKey(ekey("Exif.Photo.FocalPlaneXResolution"));
+        exifData.findKey(ekey("Exif.Photo.FocalPlaneXResolution"));
     if (pos_e == exifData.end()) {
         cerr << "ERROR: Exif.Photo.FocalPlaneXResolution was not found!" << endl;
         return false;
@@ -306,7 +306,7 @@ cv::Vec2d PhotoList::getPrincipalPoint() const {
 
 bool PhotoList::setPrincipalPoint(const Exiv2::XmpData& xmpData) {
     Exiv2::XmpData::const_iterator pos_x = \
-        pos_x = xmpData.findKey(xkey("Xmp.Camera.PrincipalPoint"));
+        xmpData.findKey(xkey("Xmp.Camera.PrincipalPoint"));
     if (pos_x == xmpData.end()) {
         cerr << "ERROR: Xmp.Camera.PrincipalPoint was not found!" << endl;
         return false;
@@ -400,54 +400,48 @@ bool PhotoList::readXmpData(const Exiv2::ExifData& exifData,
     
 }  // PhotoList::readXmpData()
 
-bool PhotoList::readFromDir(const std::string& dir_path) {
+bool PhotoList::readFromFiles(const std::vector<std::string> files) {
     // check
-    bool check;
+    bool check = true;
     bool is_first = true;
 
     // seek photo file
-    DIR *dp;
-    dirent* entry;
-    dp = opendir(dir_path.c_str());
-    if (dp == NULL) exit(1);
-    do {
-        entry = readdir(dp);
-        if (entry->d_type == DT_REG) {
-            std::string file_path = entry->d_name;
-            std::string suffix = file_path.substr(file_path.size() - 4);
-            if (suffix == ".JPG" | suffix == ".TIF") {
-                // read photo file
-                photo_vector_.push_back(fmvg::Photo(dir_path + "/" + file_path));
+    Photo photo;
+    std::string suffix;
+    for (auto file_path : files) {
+        suffix = file_path.substr(file_path.size() - 4);
+        if (suffix == ".JPG" | suffix == ".TIF") {
+            photo.readFromFile(file_path);
+            photo_vector_.emplace_back(photo);  // emplace_back?
 
-                if (is_first) {  // execute only at first
-                    // read image & its metadata
-                    Exiv2::Image::AutoPtr image = Exiv2::ImageFactory::open(file_path);
-                    assert(image.get() != 0);
-                    image->readMetadata();
+            if (is_first) {  // execute only at first
+                // read image & its metadata
+                Exiv2::Image::AutoPtr image = Exiv2::ImageFactory::open(file_path);
+                assert(image.get() != 0);
+                image->readMetadata();
 
-                    // read EXIF data
-                    Exiv2::ExifData& exifData = image->exifData();
-                    if (exifData.empty()) {
-                        std::string error(file_path);
-                        error += ": No EXIF data found in the file";
-                        cerr << error << endl;
-                        return false;
-                    }
-
-                    Exiv2::XmpData& xmpData = image->xmpData();
-                    if (xmpData.empty()) {
-                        std::string error(file_path);
-                        error += ": No XMP data found in the file";
-                        cerr << error << endl;
-                        return false;
-                    }
-
-                    check = readXmpData(exifData, xmpData);
-                    is_first = false;
+                Exiv2::ExifData& exifData = image->exifData();
+                if (exifData.empty()) {
+                    std::string error(file_path);
+                    error += ": No EXIF data found in the file";
+                    cerr << error << endl;
+                    return false;
                 }
+
+                Exiv2::XmpData& xmpData = image->xmpData();
+                if (xmpData.empty()) {
+                    std::string error(file_path);
+                    error += ": No XMP data found in the file";
+                    cerr << error << endl;
+                    return false;
+                }
+
+                check &= readXmpData(exifData, xmpData);
+                is_first = false;
             }
         }
-    } while (entry != NULL);
-}
+    }
+    return check;
+}  // PhotoList::readFromFiles
 
 }  // namespace fmvg
