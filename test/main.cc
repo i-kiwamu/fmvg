@@ -22,7 +22,7 @@ int main(int argc, char** argv) {
     }
 
     // read image files
-    std::vector<fmvg::Photo> input_photos;
+    fmvg::PhotoList input_photos;
 
     // C++17
     // for(auto& p : fs::directory_iterator(argv[1])) {
@@ -36,43 +36,30 @@ int main(int argc, char** argv) {
     //     }
     // }
     // C++11
-    std::string dir_path = argv[1];
-    const char* path = argv[1];
-    DIR *dp;
-    dirent* entry;
-    dp = opendir(path);
-    if (dp == NULL) exit(1);
-    do {
-        entry = readdir(dp);
-        if (entry != NULL) {
-            if (entry->d_type == DT_REG) {
-                std::string path_str = entry->d_name;
-                std::string suffix = path_str.substr(path_str.size() - 4);
-                if (suffix == ".JPG" | suffix == ".TIF") {
-                    fmvg::Photo photo;
-                    photo.readFromFile(dir_path + "/" + path_str);
-                    cout << path_str << endl;
-                    cout << "  Datetime: " << photo.getDateTime() << endl;
-                    cout << "  Pixel dims: " << photo.getPixelDims() << endl;
-                    cout << "  GPS: (" << photo.getGPSLatitude() << ", "
-                        << photo.getGPSLongitude() << ", "
-                        << photo.getGPSAltitude() << ")" << endl;
-                    cout << "  Model type: " << photo.getModelType() << endl;
-                    cout << "  Pixel focal length: " << photo.getPixelFocalLengths() << endl;
-                    cout << "  Principal point: " << photo.getPrincipalPoint() << endl;
-                    cout << "  Distortion coefficients: " << photo.getDistortionCoefficients() << endl;
-                    input_photos.push_back(photo);
-                }
-            }
-        }
-    } while (entry != NULL);
+    input_photos.readFromDir(argv[1]);
+    cout << "Photo list" << endl;
+    std::size_t n_photos = input_photos.getPhotoVector().size();
+    cout << "  Number of photos: " << n_photos << endl;
+    cout << "  Model type: " 
+         << input_photos.getModelType() << endl;
+    cout << "  Pixel focal length: "
+         << input_photos.getPixelFocalLengths() << endl;
+    cout << "  Principal point: "
+         << input_photos.getPrincipalPoint() << endl;
+    cout << "  Distortion coefficients: "
+         << input_photos.getDistortionCoefficients() << endl;
+    for (std::size_t i = 0; i < n_photos; ++i) {
+        cout << "Photo #" << i << endl;
+        cout << "  Date time: " << endl;
+    }
 
     // matches
-    std::unordered_map<int, std::vector<cv::DMatch>> all_matches = fmvg::matcher(input_photos);
+    std::vector<fmvg::Photo> photos = input_photos.getPhotoVector();
+    std::unordered_map<int, std::vector<cv::DMatch>> all_matches = fmvg::matcher(photos);
 
     // show all matches
     for (const auto& d : all_matches) {
-        int n_photos = input_photos.size();
+        int n_photos = photos.size();
         int j = d.first % n_photos;
         int i = (d.first - j) / n_photos;
         cout << i << "-" << j << endl;
