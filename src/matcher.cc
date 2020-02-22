@@ -38,14 +38,15 @@ std::vector<cv::DMatch> matcher_ker(cv::Mat img1, cv::Mat img2) {
     return good_matches;
 }  // matcher_ker
 
-std::unordered_map<int, std::vector<cv::DMatch>> matcher(const std::vector<Photo>& photos) {
+std::unordered_map<int, std::vector<cv::DMatch>> matcher(const PhotoList& photos) {
+    std::vector<Photo> photo_vec = photos.getPhotoVector();
     std::unordered_map<int, std::vector<cv::DMatch>> all_matches;
-    size_t n_photos = photos.size();
+    size_t n_photos = photo_vec.size();
     for (size_t i = 0; i < n_photos-1; ++i) {
         for (size_t j = i+1; j < n_photos; ++j) {
             int key = i * n_photos + j;
-            cv::Mat img_i = photos[i].getMat();
-            cv::Mat img_j = photos[j].getMat();
+            cv::Mat img_i = photo_vec[i].getMatOriginal();
+            cv::Mat img_j = photo_vec[j].getMatOriginal();
             all_matches[key] = matcher_ker(img_i, img_j);
         }
     }

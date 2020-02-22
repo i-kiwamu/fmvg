@@ -5,7 +5,6 @@
 #include <string>
 #include <sstream>  // for string split
 #include <vector>
-#include <dirent.h>  // to find files in a directory
 #include <opencv2/opencv.hpp>
 #include <exiv2/exiv2.hpp>
 #include "photo.h"
@@ -142,9 +141,9 @@ bool Photo::setGPSAltitude(const Exiv2::ExifData& exifData) {
 
 
 // mat_
-cv::Mat Photo::getMat() const {
-    return mat_;
-}  // Photo::getMat
+cv::Mat Photo::getMatOriginal() const {
+    return mat_original_;
+}  // Photo::getMatOriginal
 
 
 // read EXIF data
@@ -188,8 +187,9 @@ bool Photo::readFromFile(const std::string& file_path) {
     check = readExifData(exifData);
 
     // OpenCV mat
-    this->mat_ = cv::imread(file_path);
-    if (mat_.data == NULL) return false;
+    this->mat_original_ = cv::imread(file_path);
+    if (mat_original_.data == NULL) return false;
+    // mat_corrected_ = cv::Mat(mat_original_);
 
     // return check
     return check;
@@ -324,57 +324,77 @@ bool PhotoList::setPrincipalPoint(const Exiv2::XmpData& xmpData) {
 
 
 // distortion_coefficients_
-cv::Vec6d PhotoList::getDistortionCoefficients() const {
+cv::Mat PhotoList::getDistortCoeff() const {
     return distortion_coefficients_;
 }  // PhotoList::getDistortionCoefficients
 
-bool PhotoList::setDistortionCoefficients(const Exiv2::ExifData& exifData,
-                                          const Exiv2::XmpData& xmpData) {
+bool PhotoList::setDistortCoeffP(const Exiv2::XmpData& xmpData) {
+    Exiv2::XmpData::const_iterator pos_x;
+    std::string xmp_text_str;
+    std::string buffer;
+    distortion_coefficients_ = cv::Mat(1, 5, CV_64FC1);
+    pos_x = xmpData.findKey(xkey("Xmp.Camera.PerspectiveDistortion"));
+    if (pos_x == xmpData.end()) {
+        cerr << "ERROR: Xmp.Camera.PerspectiveDistortion was not found!" << endl;
+        return false;
+    }
+    xmp_text_str = pos_x->toString();
+    std::stringstream ss(xmp_text_str);
+    for (std::size_t i = 0; i < 5; ++i) {
+        std::getline(ss, buffer, ',');
+        distortion_coefficients_.at<float>(i) = std::stod(buffer);
+    }
+    return true;
+}  // PhotoList::setDistortCoeffP
+
+bool PhotoList::setDistortCoeffF(const Exiv2::XmpData& xmpData) {
+    Exiv2::XmpData::const_iterator pos_x;
+    std::string xmp_text_str;
+    std::string buffer;
+    distortion_coefficients_ = cv::Mat(1, 4, CV_64FC1);
+    pos_x = xmpData.findKey(xkey("Xmp.Camera.FisheyeAffineMatrix"));
+    if (pos_x == xmpData.end()) {
+        cerr << "ERROR: Xmp.Camera.FisheyeAffineMatrix was not found!" << endl;
+        return false;
+    }
+    xmp_text_str = pos_x->toString();
+    std::stringstream ss(xmp_text_str);
+    for (std::size_t i = 0; i < 4; ++i) {
+        std::getline(ss, buffer, ',');
+        distortion_coefficients_.at<float>(i) = std::stod(buffer);
+    }
+    return true;
+}  // PhotoList::setDistortCoeffF
+
+bool PhotoList::setDistortCoeff(const Exiv2::XmpData& xmpData) {
     // distortion coefficients: dc0-dc5
     // (1) perspective model,
     //   x_d = -fx*((1 + dc0*r^2 + dc1*r^4 + dc2*r^6)*x_h + 2*dc3*x_h*y_h + dc4*(r^2 + 2*x_h^2)) + cx
     //   y_d = -fy*((1 + dc0*r^2 + dc1*r^4 + dc2*r^6)*y_h + dc3*(r^2 + 2*y_h^2)) + 2*dc4*x_h*y_h + cy
     //   where fx & fy are focal lengths, r2 = x_h^2 + y_h^2, and cx & cy are principal points
-    //   Here, dc5 is not used
     // (2) fisheye lens model,
     //   (x_d, y_d) = ((dc0 dc1) (dc2 dc3)) (x_h, y_h) + (cx, cy)
-    //   Here, dc4 & dc5 are not used
-    Exiv2::ExifData::const_iterator pos_e;
-    Exiv2::XmpData::const_iterator pos_x;
-    std::string xmp_text_str;
-    std::string buffer;
-    distortion_coefficients_ = cv::Vec6d(0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
-
-    if (model_type_ == "perspective") {
-        pos_x = xmpData.findKey(xkey("Xmp.Camera.PerspectiveDistortion"));
-        if (pos_x == xmpData.end()) {
-            cerr << "ERROR: Xmp.Camera.PerspectiveDistortion was not found!" << endl;
-            return false;
-        }
-        xmp_text_str = pos_x->toString();
-        std::stringstream ss(xmp_text_str);
-        for (std::size_t i = 0; i < 5; ++i) {
-            std::getline(ss, buffer, ',');
-            distortion_coefficients_[i] = std::stod(buffer);
-        }
-    } else if (model_type_ == "fisheye") {
-        pos_x = xmpData.findKey(xkey("Xmp.Camera.FisheyeAffineMatrix"));
-        if (pos_x == xmpData.end()) {
-            cerr << "ERROR: Xmp.Camera.FisheyeAffineMatrix was not found!" << endl;
-            return false;
-        }
-        xmp_text_str = pos_x->toString();
-        std::stringstream ss(xmp_text_str);
-        for (std::size_t i = 0; i < 4; ++i) {
-            std::getline(ss, buffer, ',');
-            distortion_coefficients_[i] = std::stod(buffer);
-        }
-    } else {
+    if (model_type_ == "perspective")
+        setDistortCoeffP(xmpData);
+    else if (model_type_ == "fisheye")
+        setDistortCoeffF(xmpData);
+    else {
         cerr << "ERROR: Invalid model type (neither perspective nor fisheye)" << endl;
+        return false;
     }
+}  // PhotoList::setDistortCoeff
 
-    return true;
-}  // PhotoList::setDistortionCoefficients
+
+cv::Matx33d PhotoList::getIntrinsicMatrix() {
+    cv::Matx33d intrinsic_matrix = cv::Matx33f::zeros();
+    intrinsic_matrix(0, 0) = pixel_focal_lengths_[0];
+    intrinsic_matrix(1, 1) = pixel_focal_lengths_[1];
+    intrinsic_matrix(2, 2) = 1.0;
+    intrinsic_matrix(0, 2) = principal_point_[0];
+    intrinsic_matrix(1, 2) = principal_point_[1];
+    return intrinsic_matrix;
+}  // PhotoList::getIntrinsicMatrix
+
 
 bool PhotoList::readXmpData(const Exiv2::ExifData& exifData,
                             const Exiv2::XmpData& xmpData) {
@@ -394,7 +414,7 @@ bool PhotoList::readXmpData(const Exiv2::ExifData& exifData,
     check &= setPrincipalPoint(xmpData);
 
     // distortion coefficients
-    check &= setDistortionCoefficients(exifData, xmpData);
+    check &= setDistortCoeff(xmpData);
 
     return check;
     

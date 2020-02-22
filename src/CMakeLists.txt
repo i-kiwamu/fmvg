@@ -1,6 +1,7 @@
 # Shared library
 add_library(fmvg SHARED
     photo.cc
+    photo_correction.cc
     matcher.cc
 )
 
