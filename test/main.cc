@@ -8,7 +8,6 @@
 #include <opencv2/highgui/highgui.hpp>  // for imshow
 #include <exiv2/exiv2.hpp>
 #include "photo.h"
-#include "photo_correction.h"
 #include "matcher.h"
 
 // namespace fs = std::filesystem;
@@ -28,9 +27,9 @@ int main(int argc, char** argv) {
     args.erase(args.begin());  // remove program file name
 
     photos.readFromFiles(args);
-    std::vector<fmvg::Photo> photo_orig_vec = photos.getPhotoVector();
+    std::vector<fmvg::Photo> photo_vec = photos.getPhotoVector();
     cout << "Photo list" << endl;
-    cout << "  Number of photos: " << photo_orig_vec.size() << endl;
+    cout << "  Number of photos: " << photos.getNumPhotos() << endl;
     cout << "  Model type: " << photos.getModelType() << endl;
     cout << "  Pixel focal length: " << photos.getPixelFocalLengths() << endl;
     cout << "  Principal point: " << photos.getPrincipalPoint() << endl;
@@ -45,31 +44,18 @@ int main(int argc, char** argv) {
         cout << endl;
     }
 
-    // undistort
-    std::vector<cv::Mat> photo_undistort_vec = fmvg::undistortPhotos(photos);
-
     // show
     cv::namedWindow("Original", cv::WINDOW_AUTOSIZE);
-    cv::namedWindow("Undistort", cv::WINDOW_AUTOSIZE);
-    for (std::size_t i = 0; i < photo_orig_vec.size(); ++i) {
-        cv::imshow("Original", photo_orig_vec[i].getMatOriginal());
-        cv::imshow("Undistort", photo_undistort_vec[i]);
+    cv::namedWindow("Corrected", cv::WINDOW_AUTOSIZE);
+    for (auto p : photos) {
+        cv::imshow("Original", p.getMatOriginal());
+        cv::imshow("Corrected", p.getMatCorrected());
         cv::waitKey(0);
     }
     cv::destroyAllWindows();
 
-    // // matches
-    // std::unordered_map<int, std::vector<cv::DMatch>> all_matches = fmvg::matcher(photos);
+    // matches
 
-    // // show all matches
-    // for (const auto& d : all_matches) {
-    //     int j = d.first % n_photos;
-    //     int i = (d.first - j) / n_photos;
-    //     cout << i << "-" << j << endl;
-    //     for (const auto& x : d.second) {
-    //         cout << "  " << x.queryIdx << " --> " << x.trainIdx << endl;
-    //     }
-    // }
 
     return 0;
 }

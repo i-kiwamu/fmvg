@@ -9,7 +9,12 @@
 
 namespace fmvg {
 
-std::vector<cv::DMatch> matcher_ker(cv::Mat img1, cv::Mat img2) {
+void matcher_ker(
+    cv::Mat img1,
+    cv::Mat img2, 
+    cv::OutputArray matched_points1,
+    cv::OutputArray matched_points2
+) {
     // detect key points by BRISK
     std::vector<cv::KeyPoint> key_points1, key_points2;
     cv::Mat descriptor1, descriptor2;
@@ -28,29 +33,25 @@ std::vector<cv::DMatch> matcher_ker(cv::Mat img1, cv::Mat img2) {
 
     // filter matches (Lowe's ratio test)
     const float ratio_threshold = 0.7f;
-    std::vector<cv::DMatch> good_matches;
+    matched_points1.create(knn_matches.size(), 2, CV_16F);
+    matched_points2.create(knn_matches.size(), 2, CV_16F);
     for (size_t i = 0; i < knn_matches.size(); i++) {
-        if (knn_matches[i][0].distance < ratio_threshold * knn_matches[i][1].distance) {
-            good_matches.push_back(knn_matches[i][0]);
+        cv::DMatch x = knn_matches[i][0];
+        if (x.distance < ratio_threshold * knn_matches[i][1].distance) {
+            cv::Mat(key_points1[x.queryIdx].pt).copyTo(matched_points1.getMatRef(i));
+            cv::Mat(key_points2[x.trainIdx].pt).copyTo(matched_points2.getMatRef(i));
         }
     }
-
-    return good_matches;
 }  // matcher_ker
 
-std::unordered_map<int, std::vector<cv::DMatch>> matcher(const PhotoList& photos) {
-    std::vector<Photo> photo_vec = photos.getPhotoVector();
-    std::unordered_map<int, std::vector<cv::DMatch>> all_matches;
-    size_t n_photos = photo_vec.size();
-    for (size_t i = 0; i < n_photos-1; ++i) {
-        for (size_t j = i+1; j < n_photos; ++j) {
-            int key = i * n_photos + j;
-            cv::Mat img_i = photo_vec[i].getMatOriginal();
-            cv::Mat img_j = photo_vec[j].getMatOriginal();
-            all_matches[key] = matcher_ker(img_i, img_j);
+void match_all(const std::vector<cv::Mat>& img_vec) {
+    size_t n_img = img_vec.size();
+    for (size_t i = 0; i < n_img-1; ++i) {
+        for (size_t j = i+1; j < n_img; ++j) {
+            cv::Mat matched_points_i, matched_points_j;
+            matcher_ker(img_vec[i], img_vec[j], matched_points_i, matched_points_j);
         }
     }
-    return all_matches;
 }  // matcher
 
 }  // namespace fmvg

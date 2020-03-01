@@ -3,22 +3,38 @@
 
 namespace fmvg {
 
+bool isEqualAllElems(cv::InputArray a1, cv::InputArray a2);
+
 class Photo {
     // data members
     time_t datetime_;
-    cv::Size2i pixel_dimensions_;
+    std::string model_type_;
+    cv::Size pixel_dimensions_;
     double gps_longitude_;
     double gps_latitude_;
     double gps_altitude_;
+    cv::Vec2d pixel_per_mm_;
+    cv::Vec2d pixel_focal_lengths_;
+    cv::Vec2d principal_point_;
+    cv::Mat distortion_coefficients_;
     cv::Mat mat_original_;
-    // cv::Mat mat_corrected_;
+    cv::Mat mat_corrected_;
 
     // private member functions
-    bool setDateTime(const Exiv2::ExifData& exifData);
-    bool setPixelDims(const Exiv2::ExifData& exifData);
-    bool setGPSLongitude(const Exiv2::ExifData& exifData);
-    bool setGPSLatitude(const Exiv2::ExifData& exifDatar);
-    bool setGPSAltitude(const Exiv2::ExifData& exifData);
+    void setDateTime(const Exiv2::ExifData& exifData);
+    void setModelType(const Exiv2::XmpData& xmpData);
+    void setPixelDims(const Exiv2::ExifData& exifData);
+    void setGPSLongitude(const Exiv2::ExifData& exifData);
+    void setGPSLatitude(const Exiv2::ExifData& exifDatar);
+    void setGPSAltitude(const Exiv2::ExifData& exifData);
+    void setPixelPerMM(const Exiv2::ExifData& exifData);
+    void setPixelFocalLengths(const Exiv2::ExifData& exifData,
+                              const Exiv2::XmpData& xmpData);
+    void setPrincipalPoint(const Exiv2::XmpData& xmpData);
+    void setDistortCoeffP(const Exiv2::XmpData& xmpData);
+    void setDistortCoeffF(const Exiv2::XmpData& xmpData);
+    void setDistortCoeff(const Exiv2::XmpData& xmpData);
+    void setMetaData(const Exiv2::ExifData& exifData, const Exiv2::XmpData& xmpData);
 
 public:
     // definition equality & relational operators
@@ -31,22 +47,28 @@ public:
             mat_original_.dims == p.mat_original_.dims &&
             mat_original_.type() == p.mat_original_.type() &&
             mat_original_.channels() == p.mat_original_.channels();
-        if (test) {
-            cv::Mat test_elem = mat_original_ == p.mat_original_;
-            return cv::countNonZero(test_elem) == 0;
-        }
+        if (test)
+            return isEqualAllElems(mat_original_, p.mat_original_);
         else return false;
     }  // operator==
 
     // public member functions
     time_t getDateTime() const;
-    cv::Size2i getPixelDims() const;
+    cv::Size getPixelDims() const;
+    double getF0() const;
     double getGPSLongitude() const;
     double getGPSLatitude() const;
     double getGPSAltitude() const;
+    std::string getModelType() const;
+    cv::Vec2d getPixelPerMM() const;
+    cv::Vec2d getPixelFocalLengths() const;
+    cv::Vec2d getPrincipalPoint() const;
+    cv::Mat getDistortCoeff() const;
+    cv::Matx33d getIntrinsicMatrix();
     cv::Mat getMatOriginal() const;
-    bool readExifData(const Exiv2::ExifData& exifData);
+    cv::Mat getMatCorrected() const;
     bool readFromFile(const std::string& file_path);
+    void correctPhoto(const cv::Mat map1, const cv::Mat map2);
 
     // constructor
     Photo() {}
@@ -58,21 +80,23 @@ public:
 class PhotoList {
     // data members
     std::vector<Photo> photo_vector_;
+    size_t n_photos_;
     std::string model_type_;
+    cv::Size2i pixel_dimensions_;
     cv::Vec2d pixel_per_mm_;
     cv::Vec2d pixel_focal_lengths_;
     cv::Vec2d principal_point_;
     cv::Mat distortion_coefficients_;
 
     // private member functions
-    bool setModelType(const Exiv2::XmpData& xmpData);
-    bool setPixelPerMM(const Exiv2::ExifData& exifData);
-    bool setPixelFocalLengths(const Exiv2::ExifData& exifData,
-                              const Exiv2::XmpData& xmpData);
-    bool setPrincipalPoint(const Exiv2::XmpData& xmpData);
-    bool setDistortCoeffP(const Exiv2::XmpData& xmpData);
-    bool setDistortCoeffF(const Exiv2::XmpData& xmpData);
-    bool setDistortCoeff(const Exiv2::XmpData& xmpData);
+    void setModelType(const Photo& photo);
+    void setPixelDims(const Photo& photo);
+    void setPixelPerMM(const Photo& photo);
+    void setPixelFocalLengths(const Photo& photo);
+    void setPrincipalPoint(const Photo& photo);
+    void setDistortCoeff(const Photo& photo);
+    void setMetaData();
+    void correctPhotoList();
 
 public:
     // constructor
@@ -88,7 +112,7 @@ public:
             pixel_per_mm_ == pl.pixel_per_mm_ &&
             pixel_focal_lengths_ == pl.pixel_focal_lengths_ &&
             principal_point_ == pl.principal_point_ &&
-            cv::countNonZero(distortion_coefficients_ != pl.distortion_coefficients_) == 0;
+            isEqualAllElems(distortion_coefficients_, pl.distortion_coefficients_);
     }  // operator==
 
     // iterator
@@ -103,13 +127,15 @@ public:
 
     // public member function
     std::vector<Photo> getPhotoVector() const;
+    size_t getNumPhotos() const;
     std::string getModelType() const;
+    cv::Size2i getPixelDims() const;
+    double getF0() const;
     cv::Vec2d getPixelPerMM() const;
     cv::Vec2d getPixelFocalLengths() const;
     cv::Vec2d getPrincipalPoint() const;
     cv::Mat getDistortCoeff() const;
     cv::Matx33d getIntrinsicMatrix();
-    bool readXmpData(const Exiv2::ExifData& exifData, const Exiv2::XmpData& xmpData);
     bool readFromFiles(const std::vector<std::string>);
 };  // class PhotoList
 

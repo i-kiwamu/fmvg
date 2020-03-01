@@ -3,8 +3,14 @@
 
 namespace fmvg {
 
-std::vector<cv::DMatch> matcher_ker(cv::Mat img1, cv::Mat img2);
-std::unordered_map<int, std::vector<cv::DMatch>> matcher(const std::vector<Photo>& photos);
+void matcher_ker(
+    cv::Mat img1,
+    cv::Mat img2,
+    cv::OutputArray matched_points1,
+    cv::OutputArray matched_points2
+);
+
+void match_all(const std::vector<cv::Mat>& img_vec);
 
 }  // namespace fmvg
 
