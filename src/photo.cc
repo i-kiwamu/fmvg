@@ -511,7 +511,7 @@ cv::Matx33d PhotoList::getIntrinsicMatrix() {
     cv::Matx33d intrinsic_matrix = cv::Matx33d::zeros();
     intrinsic_matrix(0, 0) = pixel_focal_lengths_[0];
     intrinsic_matrix(1, 1) = pixel_focal_lengths_[1];
-    intrinsic_matrix(2, 2) = 1.0;
+    intrinsic_matrix(2, 2) = getF0();
     intrinsic_matrix(0, 2) = principal_point_[0];
     intrinsic_matrix(1, 2) = principal_point_[1];
     return intrinsic_matrix;
@@ -553,6 +553,7 @@ void PhotoList::correctPhotoList() {
         cv::Matx33d K (intrinsic_matrix);
         K(0, 0) = -K(0, 0);
         K(1, 1) = -K(1, 1);
+        K(2, 2) = 1.0;
         cv::initUndistortRectifyMap(
             K,
             getDistortCoeff(),
@@ -564,6 +565,7 @@ void PhotoList::correctPhotoList() {
             y_map
         );
     } else if (model_type_ == "fisheye") {
+        double f0 = getF0();
         cv::Vec2d c = getPrincipalPoint();
         cv::Mat k = getDistortCoeff();
         cv::Matx22d Q(k.at<double>(4), k.at<double>(5), k.at<double>(6), k.at<double>(7));
@@ -600,7 +602,7 @@ void PhotoList::correctPhotoList() {
                 }
                 cv::Vec2d pu = pw * scale;
                 cv::Vec3d pr = intrinsic_matrix * cv::Vec3d(pu[0], pu[1], 1.0);
-                cv::Vec3d fi(pr[0]/pr[2], pr[1]/pr[2]);
+                cv::Vec3d fi(f0*pr[0]/pr[2], f0*pr[1]/pr[2]);
                 int iu = cv::saturate_cast<int>(fi[0]*cv::INTER_TAB_SIZE);
                 int iv = cv::saturate_cast<int>(fi[1]*cv::INTER_TAB_SIZE);
                 mx[j*2+0] = (short)(iu >> cv::INTER_BITS);
