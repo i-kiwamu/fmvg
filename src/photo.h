@@ -17,6 +17,8 @@ class Photo {
     cv::Vec2d pixel_focal_lengths_;
     cv::Vec2d principal_point_;
     cv::Mat distortion_coefficients_;
+    cv::Matx33d rotation_matrix_init_;
+    cv::Matx34d camera_matrix_;
     cv::Mat mat_original_;
     cv::Mat mat_corrected_;
 
@@ -34,6 +36,7 @@ class Photo {
     void setDistortCoeffP(const Exiv2::XmpData& xmpData);
     void setDistortCoeffF(const Exiv2::XmpData& xmpData);
     void setDistortCoeff(const Exiv2::XmpData& xmpData);
+    void setRotationMatrixInit(const Exiv2::XmpData& xmpData);
     void setMetaData(const Exiv2::ExifData& exifData, const Exiv2::XmpData& xmpData);
 
 public:
@@ -59,12 +62,14 @@ public:
     double getGPSLongitude() const;
     double getGPSLatitude() const;
     double getGPSAltitude() const;
+    cv::Vec3d getCameraPositionInit() const;
     std::string getModelType() const;
     cv::Vec2d getPixelPerMM() const;
     cv::Vec2d getPixelFocalLengths() const;
     cv::Vec2d getPrincipalPoint() const;
     cv::Mat getDistortCoeff() const;
-    cv::Matx33d getIntrinsicMatrix();
+    cv::Matx33d getRotationMatrixInit() const;
+    cv::Matx34d getCameraMatrixInit() const;
     cv::Mat getMatOriginal() const;
     cv::Mat getMatCorrected() const;
     bool readFromFile(const std::string& file_path);

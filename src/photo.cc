@@ -161,6 +161,13 @@ void Photo::setGPSAltitude(const Exiv2::ExifData& exifData) {
 }  // Photo::setGPSAltitude
 
 
+// get initial camera position
+cv::Vec3d Photo::getCameraPositionInit() const {
+    cv::Vec3d pos(getGPSLatitude(), getGPSLongitude(), getGPSAltitude());
+    return pos;
+}
+
+
 // pixel_per_mm_
 cv::Vec2d Photo::getPixelPerMM() const {
     return pixel_per_mm_;
@@ -313,6 +320,84 @@ void Photo::setDistortCoeff(const Exiv2::XmpData& xmpData) {
 }  // Photo::setDistortCoeff
 
 
+// rotation_matrix_init_
+void Photo::setRotationMatrixInit(const Exiv2::XmpData& xmpData) {
+    double deg2rad = CV_PI / 180.0;
+    Exiv2::XmpData::const_iterator pos_x;
+
+    // yaw (around Z axis)
+    pos_x = xmpData.findKey(xkey("Xmp.Camera.Yaw"));
+    if (pos_x == xmpData.end())
+        throw std::invalid_argument("Xmp.Camera.Yaw was not found!");
+    double yaw = pos_x->toFloat() * deg2rad;
+    cv::Matx33d Rz_ypr = cv::Matx33d::eye();
+    Rz_ypr(0,0) = std::cos(yaw);
+    Rz_ypr(1,1) = std::cos(yaw);
+    Rz_ypr(0,1) = -std::sin(yaw);
+    Rz_ypr(1,0) = std::sin(yaw);
+
+    // pitch (around Y axis)
+    pos_x = xmpData.findKey(xkey("Xmp.Camera.Pitch"));
+    if (pos_x == xmpData.end())
+        throw std::invalid_argument("Xmp.Camera.Pitch was not found!");
+    double pitch = pos_x->toFloat() * deg2rad;
+    cv::Matx33d Ry_ypr = cv::Matx33d::eye();
+    Ry_ypr(0,0) = std::cos(pitch);
+    Ry_ypr(2,2) = std::cos(pitch);
+    Ry_ypr(0,2) = std::sin(pitch);
+    Ry_ypr(2,0) = -std::sin(pitch);
+
+    // roll (around X axis)
+    pos_x = xmpData.findKey(xkey("Xmp.Camera.Roll"));
+    if (pos_x == xmpData.end())
+        throw std::invalid_argument("Xmp.Camera.Roll was not found!");
+    double roll = pos_x->toFloat() * deg2rad;
+    cv::Matx33d Rx_ypr = cv::Matx33d::eye();
+    Rx_ypr(1,1) = std::cos(roll);
+    Rx_ypr(2,2) = std::cos(roll);
+    Rx_ypr(1,2) = -std::sin(roll);
+    Rx_ypr(2,1) = std::sin(roll);
+
+    cv::Matx33d R_ypr = Rz_ypr * Ry_ypr * Rx_ypr;
+
+    double delta = 1e-06;
+    cv::Vec3d p1(getGPSLatitude()+delta, getGPSLongitude(), getGPSAltitude());
+    cv::Vec3d p2(getGPSLatitude()-delta, getGPSLongitude(), getGPSAltitude());
+    cv::Vec3d xn = p1 - p2;
+    xn = xn / cv::norm(xn);
+    cv::Vec3d zn(0.0, 0.0, -1.0);
+    cv::Vec3d yn = zn.cross(xn);
+    cv::Matx33d Ce;
+    for (int i = 0; i < 3; ++i) {
+        Ce(i,0) = xn[i];
+        Ce(i,1) = yn[i];
+        Ce(i,2) = zn[i];
+    }
+
+    cv::Matx33d Cb = cv::Matx33d::zeros();
+    Cb(0,1) = 1.0;
+    Cb(1,0) = 1.0;
+    Cb(2,2) = -1.0;
+
+    cv::Mat R_opk = (cv::Mat)(Ce * R_ypr * Cb);
+    R_opk.copyTo(rotation_matrix_init_);
+}  // Photo::setRotationMatrixInit
+
+cv::Matx33d Photo::getRotationMatrixInit() const {
+    return rotation_matrix_init_;
+}  // Photo::getRotationMatrixInit
+
+
+// camera matrix init
+cv::Matx34d Photo::getCameraMatrixInit() const {
+    cv::Matx33d rotation_matrix_init_t = rotation_matrix_init_.t();
+    cv::Vec3d rotated_position_init = -1.0 * rotation_matrix_init_t * getCameraPositionInit();
+    cv::Matx34d camera_matrix_init;
+    cv::hconcat(rotation_matrix_init_t, rotated_position_init, camera_matrix_init);
+    return camera_matrix_init;
+}
+
+
 // mat_original_
 cv::Mat Photo::getMatOriginal() const {
     return mat_original_;
@@ -356,6 +441,9 @@ void Photo::setMetaData(
 
         // distortion coefficients
         setDistortCoeff(xmpData);
+
+        // rotation matrix initial
+        setRotationMatrixInit(xmpData);
     }
     catch (std::invalid_argument& e) {
         cerr << e.what() << endl;

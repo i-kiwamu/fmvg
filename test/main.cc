@@ -38,9 +38,8 @@ int main(int argc, char** argv) {
     for (auto p = photos.begin(); p != photos.end(); ++p) {
         cout << "Date&time: " << p->getDateTime() << endl;
         cout << "Pixel dimensions: " << p->getPixelDims() << endl;
-        cout << "GPS: (" << p->getGPSLatitude() << ", "
-             << p->getGPSLongitude() << ", "
-             << p->getGPSAltitude() << ")" << endl;
+        cout << "GPS: " << p->getCameraPositionInit() << endl;
+        cout << "Camera matrix: " << p->getCameraMatrixInit() << endl;
         cout << endl;
     }
 
