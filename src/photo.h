@@ -18,6 +18,7 @@ class Photo {
     cv::Vec2d principal_point_;
     cv::Mat distortion_coefficients_;
     cv::Matx33d rotation_matrix_init_;
+    cv::Matx34d camera_matrix_init_;
     cv::Matx34d camera_matrix_;
     cv::Mat mat_original_;
     cv::Mat mat_corrected_;
@@ -37,6 +38,8 @@ class Photo {
     void setDistortCoeffF(const Exiv2::XmpData& xmpData);
     void setDistortCoeff(const Exiv2::XmpData& xmpData);
     void setRotationMatrixInit(const Exiv2::XmpData& xmpData);
+    void setCameraMatrixInit();
+    void setCameraMatrix(const cv::Mat new_camera_matrix);
     void setMetaData(const Exiv2::ExifData& exifData, const Exiv2::XmpData& xmpData);
 
 public:
@@ -68,6 +71,7 @@ public:
     cv::Vec2d getPixelFocalLengths() const;
     cv::Vec2d getPrincipalPoint() const;
     cv::Mat getDistortCoeff() const;
+    cv::Matx33d getIntrinsicMatrix() const;
     cv::Matx33d getRotationMatrixInit() const;
     cv::Matx34d getCameraMatrixInit() const;
     cv::Mat getMatOriginal() const;
