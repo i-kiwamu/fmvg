@@ -243,7 +243,7 @@ void Photo::setPrincipalPoint(const Exiv2::XmpData& xmpData) {
     std::string xmp_text_str = pos_x->toString();
     std::stringstream ss(xmp_text_str);
     std::string buffer;
-    for (std::size_t i = 0; i < 2; ++i) {
+    for (int i = 0; i < 2; ++i) {
         std::getline(ss, buffer, ',');
         principal_point_[i] = std::stod(buffer) * pixel_per_mm_[i];
     }
@@ -267,7 +267,7 @@ void Photo::setDistortCoeffP(const Exiv2::XmpData& xmpData) {
     xmp_text_str = pos_x->toString();
     std::stringstream ss(xmp_text_str);
     std::vector<int> dcp_index = {0, 1, 4, 2, 3};
-    for (std::size_t i = 0; i < 5; ++i) {
+    for (int i = 0; i < 5; ++i) {
         std::getline(ss, buffer, ',');
         distortion_coefficients_.at<double>(dcp_index[i]) = std::stod(buffer);
     }
@@ -284,7 +284,7 @@ void Photo::setDistortCoeffF(const Exiv2::XmpData& xmpData) {
 
     xmp_text_str = pos_x->toString();
     std::stringstream ss(xmp_text_str);
-    for (std::size_t i = 0; i < 4; ++i) {
+    for (int i = 0; i < 4; ++i) {
         std::getline(ss, buffer, ',');
         distortion_coefficients_.at<double>(i) = std::stod(buffer);
     }
@@ -295,7 +295,7 @@ void Photo::setDistortCoeffF(const Exiv2::XmpData& xmpData) {
 
     xmp_text_str = pos_x->toString();
     std::stringstream ss1(xmp_text_str);
-    for (std::size_t i = 4; i < 8; ++i) {
+    for (int i = 4; i < 8; ++i) {
         std::getline(ss1, buffer, ',');
         distortion_coefficients_.at<double>(i) = std::stod(buffer);
     }
@@ -632,28 +632,28 @@ cv::Matx33d PhotoList::getIntrinsicMatrix() {
 
 
 void PhotoList::setMetaData() {
-    Photo photo = photo_vector_[0];
-    setModelType(photo);
-    setPixelDims(photo);
-    setPixelPerMM(photo);
-    setPixelFocalLengths(photo);
-    setPrincipalPoint(photo);
-    setDistortCoeff(photo);
+    // Photo photo0 = photo_vector_[0];
+    const_iterator p0 = photo_vector_.begin();
+    setModelType(*p0);
+    setPixelDims(*p0);
+    setPixelPerMM(*p0);
+    setPixelFocalLengths(*p0);
+    setPrincipalPoint(*p0);
+    setDistortCoeff(*p0);
 
     // check all the meta data are the same
-    for (size_t i = 1; i < n_photos_; ++i) {
-        photo = photo_vector_[i];
-        if (model_type_ != photo.getModelType())
+    for (const_iterator p = ++p0; p != photo_vector_.end(); ++p) {
+        if (model_type_ != p->getModelType())
             cerr << "Different model types are included!" << endl;
-        if (pixel_dimensions_ != photo.getPixelDims())
+        if (pixel_dimensions_ != p->getPixelDims())
             cerr << "Different pixel dimensions are included!" << endl;
-        if (pixel_per_mm_ != photo.getPixelPerMM())
+        if (pixel_per_mm_ != p->getPixelPerMM())
             cerr << "Different pixel per mm are included!" << endl;
-        if (pixel_focal_lengths_ != photo.getPixelFocalLengths())
+        if (pixel_focal_lengths_ != p->getPixelFocalLengths())
             cerr << "Different pixel focal lengths are included!" << endl;
-        if (principal_point_ != photo.getPrincipalPoint())
+        if (principal_point_ != p->getPrincipalPoint())
             cerr << "Different principal points are included!" << endl;
-        if (!isEqualAllElems(distortion_coefficients_, photo.getDistortCoeff()))
+        if (!isEqualAllElems(distortion_coefficients_, p->getDistortCoeff()))
             cerr << "Different distortion coefficients are included!" << endl;
     }
 }  // PhotoList::setMetaData
@@ -762,6 +762,7 @@ bool PhotoList::readFromFiles(const std::vector<std::string> files) {
         correctPhotoList();
     } catch (std::invalid_argument& e) {
         cerr << e.what() << endl;
+        return false;
     }
 
     return true;
