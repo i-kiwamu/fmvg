@@ -54,7 +54,5 @@ int main(int argc, char** argv) {
     cv::destroyAllWindows();
 
     // matches
-
-
     return 0;
 }

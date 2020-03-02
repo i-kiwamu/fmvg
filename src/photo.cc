@@ -695,6 +695,7 @@ void PhotoList::correctPhotoList() {
                 cv::Vec2d pw = iQ * (pi - c);
             
                 double theta_d = std::sqrt(pw[0]*pw[0] + pw[1]*pw[1]);
+                double theta_fix = theta_d;
                 double scale = 1.0;
                 if (theta_d > 1e-8) {
                     double theta = theta_d;
@@ -705,12 +706,14 @@ void PhotoList::correctPhotoList() {
                         double k1_theta1 = k.at<double>(1) * theta,
                                k2_theta2 = k.at<double>(2) * theta2,
                                k3_theta3 = k.at<double>(3) * theta3;
-                        double theta_fix = (theta * (1 + k1_theta1 + k2_theta2 + k3_theta3) - theta_d) /
+                        theta_fix = (theta * (1 + k1_theta1 + k2_theta2 + k3_theta3) - theta_d) /
                             (1 + 2*k1_theta1 + 3*k2_theta2 + 4*k3_theta3);
                         theta = theta - theta_fix;
                         if (std::fabs(theta_fix) < EPS)
                             break;
                     }
+                    if (std::fabs(theta_fix) >= EPS)
+                        cerr << "WARNING: theta was not converged!" << endl;
                     scale = std::tan(theta * CV_PI / 2.0) / theta_d;
                 }
                 cv::Vec2d pu = pw * scale;
@@ -727,24 +730,23 @@ void PhotoList::correctPhotoList() {
     } else
         throw std::invalid_argument("Invalid model type (neither perspective nor fisheye)");
 
-    for (size_t i = 0; i < getNumPhotos(); ++i) {
-        Photo p = photo_vector_[i];
+    for (auto& p : photo_vector_)
         p.correctPhoto(x_map, y_map);
-        photo_vector_[i] = p;
-    }
 }
 
 
 bool PhotoList::readFromFiles(const std::vector<std::string> files) {
+    // reserve memory for photo_vector_
+    int n_files = files.size();
+    photo_vector_.reserve(n_files);
+
     // seek photo files
     Photo photo;
     std::string suffix;
     for (auto file_path : files) {
         suffix = file_path.substr(file_path.size() - 4);
-        if (suffix == ".JPG" | suffix == ".TIF") {
-            photo.readFromFile(file_path);
-            photo_vector_.emplace_back(photo);
-        }
+        if (suffix == ".JPG" | suffix == ".TIF")
+            photo_vector_.emplace_back(file_path);
     }
     n_photos_ = photo_vector_.size();
     if (n_photos_ == 0) {
