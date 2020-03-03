@@ -17,7 +17,9 @@ class Photo {
     cv::Vec2d pixel_focal_lengths_;
     cv::Vec2d principal_point_;
     cv::Mat distortion_coefficients_;
+    cv::Matx33d intrinsic_matrix_;
     cv::Matx33d rotation_matrix_init_;
+    cv::Matx33d rotation_matrix_;
     cv::Matx34d camera_matrix_init_;
     cv::Matx34d camera_matrix_;
     cv::Mat mat_original_;
@@ -37,9 +39,9 @@ class Photo {
     void setDistortCoeffP(const Exiv2::XmpData& xmpData);
     void setDistortCoeffF(const Exiv2::XmpData& xmpData);
     void setDistortCoeff(const Exiv2::XmpData& xmpData);
+    void setIntrinsicMatrix();
     void setRotationMatrixInit(const Exiv2::XmpData& xmpData);
     void setCameraMatrixInit();
-    void setCameraMatrix(const cv::Mat new_camera_matrix);
     void setMetaData(const Exiv2::ExifData& exifData, const Exiv2::XmpData& xmpData);
 
 public:
@@ -73,11 +75,19 @@ public:
     cv::Mat getDistortCoeff() const;
     cv::Matx33d getIntrinsicMatrix() const;
     cv::Matx33d getRotationMatrixInit() const;
+    cv::Matx33d getRotationMatrix() const;
     cv::Matx34d getCameraMatrixInit() const;
+    cv::Matx34d getCameraMatrix() const;
     cv::Mat getMatOriginal() const;
     cv::Mat getMatCorrected() const;
     bool readFromFile(const std::string& file_path);
     void correctPhoto(const cv::Mat map1, const cv::Mat map2);
+    void updateRotationMatrix(
+        const cv::Vec3d& omega1,
+        const cv::Vec3d& omega2,
+        const cv::Vec3d& omega3
+    );
+    void updateCameraMatrix(const cv::Mat new_camera_matrix);
 
     // constructor
     Photo() {}
@@ -96,6 +106,7 @@ class PhotoList {
     cv::Vec2d pixel_focal_lengths_;
     cv::Vec2d principal_point_;
     cv::Mat distortion_coefficients_;
+    cv::Matx33d intrinsic_matrix_;
 
     // private member functions
     void setModelType(const Photo& photo);
@@ -104,6 +115,7 @@ class PhotoList {
     void setPixelFocalLengths(const Photo& photo);
     void setPrincipalPoint(const Photo& photo);
     void setDistortCoeff(const Photo& photo);
+    void setIntrinsicMatrix(const Photo& photo);
     void setMetaData();
     void correctPhotoList();
 
@@ -144,7 +156,7 @@ public:
     cv::Vec2d getPixelFocalLengths() const;
     cv::Vec2d getPrincipalPoint() const;
     cv::Mat getDistortCoeff() const;
-    cv::Matx33d getIntrinsicMatrix();
+    cv::Matx33d getIntrinsicMatrix () const;
     bool readFromFiles(const std::vector<std::string>);
 };  // class PhotoList
 

@@ -321,18 +321,29 @@ void Photo::setDistortCoeff(const Exiv2::XmpData& xmpData) {
 
 
 // intrinsic matrix
+//       ┌            ┐
+//       | f_x  0  u0 |
+//   K = |  0  f_y v0 |
+//       |  0   0  f0 |
+//       └            ┘
+//   * f_x & f_y: focal lengths (pixel)
+//   * u0 & v0: principal point (pixel) of x & y
+//   * f0: scale factor ~ image width (pixel)
+void Photo::setIntrinsicMatrix() {
+    intrinsic_matrix_(0, 0) = pixel_focal_lengths_[0];
+    intrinsic_matrix_(1, 1) = pixel_focal_lengths_[1];
+    intrinsic_matrix_(2, 2) = getF0();
+    intrinsic_matrix_(0, 2) = principal_point_[0];
+    intrinsic_matrix_(1, 2) = principal_point_[1];
+}  // Photo::setIntrinsicMatrix
+
 cv::Matx33d Photo::getIntrinsicMatrix() const {
-    cv::Matx33d intrinsic_matrix = cv::Matx33d::zeros();
-    intrinsic_matrix(0, 0) = pixel_focal_lengths_[0];
-    intrinsic_matrix(1, 1) = pixel_focal_lengths_[1];
-    intrinsic_matrix(2, 2) = getF0();
-    intrinsic_matrix(0, 2) = principal_point_[0];
-    intrinsic_matrix(1, 2) = principal_point_[1];
-    return intrinsic_matrix;
-}  // Photo::getIntrinsicMatrix
+    return intrinsic_matrix_;
+}
 
 
 // rotation_matrix_init_
+//   change (yaw, pitch, roll) to (omega, phi, kappa)
 void Photo::setRotationMatrixInit(const Exiv2::XmpData& xmpData) {
     double deg2rad = CV_PI / 180.0;
     Exiv2::XmpData::const_iterator pos_x;
@@ -391,8 +402,12 @@ void Photo::setRotationMatrixInit(const Exiv2::XmpData& xmpData) {
     Cb(1,0) = 1.0;
     Cb(2,2) = -1.0;
 
-    cv::Mat R_opk = (cv::Mat)(Ce * R_ypr * Cb);
-    R_opk.copyTo(rotation_matrix_init_);
+    cv::Matx33d R_opk = Ce * R_ypr * Cb;
+    for (int i = 0; i < 3; ++i)
+        for (int j = 0; j < 3; ++j) {
+            rotation_matrix_init_(i,j) = R_opk(i,j);
+            rotation_matrix_(i,j) = R_opk(i,j);
+        }
 }  // Photo::setRotationMatrixInit
 
 cv::Matx33d Photo::getRotationMatrixInit() const {
@@ -400,13 +415,44 @@ cv::Matx33d Photo::getRotationMatrixInit() const {
 }  // Photo::getRotationMatrixInit
 
 
+// rotation_matrix_
+//   @param (omega1) rotation vector around X axis
+//   @param (omega2) rotation vector around Y axis
+//   @param (omega3) rotation vector around Z axis
+void Photo::updateRotationMatrix(
+    const cv::Vec3d& omega1,
+    const cv::Vec3d& omega2,
+    const cv::Vec3d& omega3
+) {
+    cv::Matx33d R1, R2, R3;
+    cv::Rodrigues(omega1, R1, cv::noArray());
+    cv::Rodrigues(omega2, R2, cv::noArray());
+    cv::Rodrigues(omega3, R3, cv::noArray());
+    camera_matrix_ = R1 * R2 * R3 * camera_matrix_;
+}  // Photo::updateRotationMatrix
+
+cv::Matx33d Photo::getRotationMatrix() const {
+    return rotation_matrix_;
+}  // Photo::getRotationMatrix
+
+
 // camera_matrix_init_
+//   P = K * R^T * [I -t]
+//   * K: intrinsic matrix (3 by 3)
+//   * R^T: transposed rotation matrix (R, 3 by 3)
+//   * I: identity matrix (3 by 3)
+//   * t: translation vector (3 elems)
+//   * [I -t]: matrix of joining I and -t (3 by 4)
 void Photo::setCameraMatrixInit() {
     cv::Matx33d K = getIntrinsicMatrix();
     cv::Matx33d RT = rotation_matrix_init_.t();
     cv::Matx34d It;
     cv::hconcat(cv::Matx33d::eye(), -getCameraPositionInit(), It);
     camera_matrix_init_ = K * RT * It;
+
+    for (int i = 0; i < 3; ++i)
+        for (int j = 0; j < 4; ++j)
+            camera_matrix_(i,j) = camera_matrix_init_(i,j);
 }  // Photo::setCameraMatrixInit
 
 cv::Matx34d Photo::getCameraMatrixInit() const {
@@ -414,10 +460,14 @@ cv::Matx34d Photo::getCameraMatrixInit() const {
 }
 
 
-// set new camera matrix
-void Photo::setCameraMatrix(const cv::Mat new_camera_matrix) {
+// camera_matrix_
+void Photo::updateCameraMatrix(const cv::Mat new_camera_matrix) {
     new_camera_matrix.copyTo(camera_matrix_);
-}  // Photo::setCameraMatrix
+}  // Photo::updateCameraMatrix
+
+cv::Matx34d Photo::getCameraMatrix() const {
+    return camera_matrix_;
+}  // Photo::getCameraMatrix
 
 
 // mat_original_
@@ -466,6 +516,9 @@ void Photo::setMetaData(
 
         // rotation matrix initial
         setRotationMatrixInit(xmpData);
+
+        // intrinsic matrix
+        setIntrinsicMatrix();
 
         // camera matrix initial
         setCameraMatrixInit();
@@ -620,15 +673,13 @@ void PhotoList::setDistortCoeff(const Photo& photo) {
 }  // PhotoList::setDistortCoeff
 
 
-cv::Matx33d PhotoList::getIntrinsicMatrix() {
-    cv::Matx33d intrinsic_matrix = cv::Matx33d::zeros();
-    intrinsic_matrix(0, 0) = pixel_focal_lengths_[0];
-    intrinsic_matrix(1, 1) = pixel_focal_lengths_[1];
-    intrinsic_matrix(2, 2) = getF0();
-    intrinsic_matrix(0, 2) = principal_point_[0];
-    intrinsic_matrix(1, 2) = principal_point_[1];
-    return intrinsic_matrix;
-}  // PhotoList::getIntrinsicMatrix
+void PhotoList::setIntrinsicMatrix(const Photo& photo) {
+    intrinsic_matrix_ = photo.getIntrinsicMatrix();
+}  // PhotoList::setIntrinsicMatrix
+
+cv::Matx33d PhotoList::getIntrinsicMatrix() const {
+    return intrinsic_matrix_;
+}
 
 
 void PhotoList::setMetaData() {
@@ -640,6 +691,7 @@ void PhotoList::setMetaData() {
     setPixelFocalLengths(*p0);
     setPrincipalPoint(*p0);
     setDistortCoeff(*p0);
+    setIntrinsicMatrix(*p0);
 
     // check all the meta data are the same
     for (const_iterator p = ++p0; p != photo_vector_.end(); ++p) {
