@@ -9,49 +9,89 @@
 
 namespace fmvg {
 
-void matcher_ker(
-    cv::Mat img1,
-    cv::Mat img2, 
-    cv::OutputArray matched_points1,
-    cv::OutputArray matched_points2
+void detectFeatures(
+    const Photo& photo,
+    std::vector<cv::KeyPoint>& key_points,
+    cv::OutputArray descriptor
 ) {
-    // detect key points by BRISK
-    std::vector<cv::KeyPoint> key_points1, key_points2;
-    cv::Mat descriptor1, descriptor2;
     auto brisk = cv::BRISK::create();
-    brisk->detectAndCompute(img1, cv::noArray(), key_points1, descriptor1);
-    brisk->detectAndCompute(img2, cv::noArray(), key_points2, descriptor2);
-    if (descriptor1.type() != CV_32F)
-        descriptor1.convertTo(descriptor1, CV_32F);
-    if (descriptor2.type() != CV_32F)
-        descriptor2.convertTo(descriptor2, CV_32F);
+    brisk->detectAndCompute(
+        photo.getMatCorrected(),
+        cv::noArray(),
+        key_points,
+        descriptor
+    );
+    if (brisk->descriptorType() != CV_32F)
+        descriptor.getMat().convertTo(descriptor, CV_32F);
+}  //detectFeatures
+
+void matchTwoPhotos(
+    const int i,
+    const int j,
+    const std::vector<std::vector<cv::KeyPoint>>& key_points_vec,
+    const std::vector<cv::Mat>& descriptor_vec,
+    cv::OutputArray matched_points
+) {
+    const std::vector<cv::KeyPoint>& key_points2 = key_points_vec[i+j];
+    cv::Mat descriptor1 = descriptor_vec[i];
+    cv::Mat descriptor2 = descriptor_vec[i+j];
 
     // search matches by FLANN (k nearest neighbors method)
-    auto matcher = cv::DescriptorMatcher::create(cv::DescriptorMatcher::FLANNBASED);
+    auto matcher = cv::DescriptorMatcher::create(
+        cv::DescriptorMatcher::FLANNBASED
+    );
     std::vector<std::vector<cv::DMatch>> knn_matches;
     matcher->knnMatch(descriptor1, descriptor2, knn_matches, 2);
 
     // filter matches (Lowe's ratio test)
     const float ratio_threshold = 0.7f;
-    matched_points1.create(knn_matches.size(), 2, CV_16F);
-    matched_points2.create(knn_matches.size(), 2, CV_16F);
-    for (size_t i = 0; i < knn_matches.size(); i++) {
-        cv::DMatch x = knn_matches[i][0];
-        if (x.distance < ratio_threshold * knn_matches[i][1].distance) {
-            cv::Mat(key_points1[x.queryIdx].pt).copyTo(matched_points1.getMatRef(i));
-            cv::Mat(key_points2[x.trainIdx].pt).copyTo(matched_points2.getMatRef(i));
+    for (size_t k = 0; k < knn_matches.size(); ++k) {
+        cv::DMatch x = knn_matches[k][0];
+        if (x.distance < ratio_threshold * knn_matches[k][1].distance) {
+            float* matched_points_k = \
+                matched_points.getMat().ptr<float>(x.queryIdx);
+            matched_points_k[j*2+0] = key_points2[x.trainIdx].pt.x;
+            matched_points_k[j*2+1] = key_points2[x.trainIdx].pt.y;
         }
     }
-}  // matcher_ker
+}  // matchTwoPhotos
 
-void match_all(const std::vector<cv::Mat>& img_vec) {
-    size_t n_img = img_vec.size();
-    for (size_t i = 0; i < n_img-1; ++i) {
-        for (size_t j = i+1; j < n_img; ++j) {
-            cv::Mat matched_points_i, matched_points_j;
-            matcher_ker(img_vec[i], img_vec[j], matched_points_i, matched_points_j);
+void matchAll(
+    const PhotoList& photos,
+    std::vector<std::vector<cv::KeyPoint>>& key_points_vec,
+    std::vector<cv::Mat>& matched_points_vec
+) {
+    int n_photos = photos.getNumPhotos();
+    std::vector<cv::Mat> descriptor_vec(n_photos);
+
+    for (int i = 0; i < n_photos-1; ++i) {
+        if (key_points_vec[i].empty()) {
+            detectFeatures(
+                photos.getPhotoVector()[i],
+                key_points_vec[i],
+                descriptor_vec[i]
+            );
+        }
+        int n_key_points_i = key_points_vec[i].size();
+        cv::Mat& matched_points = matched_points_vec[i];
+        matched_points.create(n_key_points_i, n_photos-i, CV_32FC2);
+        matched_points.setTo(cv::Scalar(-1.0f, -1.0f));
+        for (int j = i+1; j < n_photos; ++j) {
+            if (key_points_vec[j].empty()) {
+                detectFeatures(
+                    photos.getPhotoVector()[j],
+                    key_points_vec[j],
+                    descriptor_vec[j]
+                );
+            }
+            matchTwoPhotos(
+                i, j-i,
+                key_points_vec,
+                descriptor_vec,
+                matched_points
+            );
         }
     }
-}  // matcher
+}  // matchAll
 
 }  // namespace fmvg

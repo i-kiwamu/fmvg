@@ -27,9 +27,11 @@ int main(int argc, char** argv) {
     args.erase(args.begin());  // remove program file name
 
     photos.readFromFiles(args);
+
+    int n_photos = photos.getNumPhotos();
     std::vector<fmvg::Photo> photo_vec = photos.getPhotoVector();
     cout << "Photo list" << endl;
-    cout << "  Number of photos: " << photos.getNumPhotos() << endl;
+    cout << "  Number of photos: " << n_photos << endl;
     cout << "  Model type: " << photos.getModelType() << endl;
     cout << "  Pixel focal length: " << photos.getPixelFocalLengths() << endl;
     cout << "  Principal point: " << photos.getPrincipalPoint() << endl;
@@ -43,16 +45,21 @@ int main(int argc, char** argv) {
         cout << endl;
     }
 
-    // show
-    cv::namedWindow("Original", cv::WINDOW_AUTOSIZE);
-    cv::namedWindow("Corrected", cv::WINDOW_AUTOSIZE);
-    for (auto p : photos) {
-        cv::imshow("Original", p.getMatOriginal());
-        cv::imshow("Corrected", p.getMatCorrected());
-        cv::waitKey(0);
-    }
-    cv::destroyAllWindows();
+    // // show
+    // cv::namedWindow("Original", cv::WINDOW_AUTOSIZE);
+    // cv::namedWindow("Corrected", cv::WINDOW_AUTOSIZE);
+    // for (auto p : photos) {
+    //     cv::imshow("Original", p.getMatOriginal());
+    //     cv::imshow("Corrected", p.getMatCorrected());
+    //     cv::waitKey(0);
+    // }
+    // cv::destroyAllWindows();
 
     // matches
+    std::vector<std::vector<cv::KeyPoint>> key_points_vec(n_photos);
+    std::vector<cv::Mat> matched_points_vec(n_photos-1);
+    fmvg::matchAll(photos, key_points_vec, matched_points_vec);
+    // cout << matched_points_vec[0] << endl;
+
     return 0;
 }

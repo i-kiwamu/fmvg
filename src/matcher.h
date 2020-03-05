@@ -3,14 +3,25 @@
 
 namespace fmvg {
 
-void matcher_ker(
-    cv::Mat img1,
-    cv::Mat img2,
-    cv::OutputArray matched_points1,
-    cv::OutputArray matched_points2
+void detectFeatures(
+    const Photo& photo,
+    std::vector<cv::KeyPoint>& key_points,
+    cv::OutputArray descriptor
 );
 
-void match_all(const std::vector<cv::Mat>& img_vec);
+void matchTwoPhotos(
+    const int i,
+    const int j,
+    const std::vector<std::vector<cv::KeyPoint>>& key_points_vec,
+    const std::vector<cv::Mat>& descriptor_vec,
+    cv::OutputArray matched_points
+);
+
+void matchAll(
+    const PhotoList& photos,
+    std::vector<std::vector<cv::KeyPoint>>& key_points_vec,
+    std::vector<cv::Mat>& matched_points_vec
+);
 
 }  // namespace fmvg
 
