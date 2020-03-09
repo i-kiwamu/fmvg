@@ -673,6 +673,7 @@ void PhotoList::setDistortCoeff(const Photo& photo) {
 }  // PhotoList::setDistortCoeff
 
 
+// intrinsic_matrix_
 void PhotoList::setIntrinsicMatrix(const Photo& photo) {
     intrinsic_matrix_ = photo.getIntrinsicMatrix();
 }  // PhotoList::setIntrinsicMatrix
@@ -682,8 +683,39 @@ cv::Matx33d PhotoList::getIntrinsicMatrix() const {
 }
 
 
+// rotation_matrix_vec_ & camera_matrix_vec
+void PhotoList::setTranslationRotationAndCameraMatrixVec() {
+    translation_vec_.reserve(n_photos_);
+    rotation_matrix_vec_.reserve(n_photos_);
+    camera_matrix_vec_.reserve(n_photos_);
+
+    const_iterator p_begin = photo_vector_.begin(),
+                   p_end = photo_vector_.end();
+    for (const_iterator p = p_begin; p != p_end; ++p) {
+        translation_vec_.emplace_back(
+            p->getGPSLatitude(),
+            p->getGPSLongitude(),
+            p->getGPSAltitude()
+        );
+        rotation_matrix_vec_.push_back(p->getRotationMatrix());
+        camera_matrix_vec_.push_back(p->getCameraMatrix());
+    }
+}  // PhotoList::setTranslationRotationAndCameraMatrixVec
+
+std::vector<cv::Vec3d> PhotoList::getTranslationVec() const {
+    return translation_vec_;
+}  // PhotoList::getTranslationVec
+
+std::vector<cv::Matx33d> PhotoList::getRotationMatrixVec() const {
+    return rotation_matrix_vec_;
+}  // PhotoList::getRotationMatrixVec
+
+std::vector<cv::Matx34d> PhotoList::getCameraMatrixVec() const {
+    return camera_matrix_vec_;
+}  // PhotoList::getCameraMatrixVec
+
+
 void PhotoList::setMetaData() {
-    // Photo photo0 = photo_vector_[0];
     const_iterator p0 = photo_vector_.begin();
     setModelType(*p0);
     setPixelDims(*p0);

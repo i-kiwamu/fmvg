@@ -3,14 +3,16 @@
 #include <string>
 #include <time.h>
 #include <vector>
-#include <unordered_map>
+#include <map>
+#include <utility>
 #include <opencv2/opencv.hpp>
 #include <opencv2/highgui/highgui.hpp>  // for imshow
 #include <exiv2/exiv2.hpp>
+
 #include "photo.h"
 #include "matcher.h"
+// #include "bundle_adjuster.h"
 
-// namespace fs = std::filesystem;
 using std::cout;
 using std::cerr;
 using std::endl;
@@ -45,6 +47,14 @@ int main(int argc, char** argv) {
         cout << endl;
     }
 
+    // cv::Vec2d pp = photos.getPhotoVector()[n_photos-1].getPrincipalPoint();
+    // cv::Point2f ppf;
+    // ppf.x = (float)pp[0];
+    // ppf.y = (float)pp[1];
+    // cout << "Recalculate GPS last: "
+    //      << 
+    //      << endl;
+
     // // show
     // cv::namedWindow("Original", cv::WINDOW_AUTOSIZE);
     // cv::namedWindow("Corrected", cv::WINDOW_AUTOSIZE);
@@ -56,10 +66,12 @@ int main(int argc, char** argv) {
     // cv::destroyAllWindows();
 
     // matches
-    std::vector<std::vector<cv::KeyPoint>> key_points_vec(n_photos);
-    std::vector<cv::Mat> matched_points_vec(n_photos-1);
-    fmvg::matchAll(photos, key_points_vec, matched_points_vec);
+    std::map<std::pair<int,int>, std::vector<cv::DMatch>> matched_map;
+    fmvg::matchAll(photos, matched_map);
     // cout << matched_points_vec[0] << endl;
+
+    // bundle adjustment
+    // fmvg::bundleAdjuster(photos, matched_points_vec);
 
     return 0;
 }

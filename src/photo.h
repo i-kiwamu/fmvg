@@ -107,6 +107,9 @@ class PhotoList {
     cv::Vec2d principal_point_;
     cv::Mat distortion_coefficients_;
     cv::Matx33d intrinsic_matrix_;
+    std::vector<cv::Vec3d> translation_vec_;
+    std::vector<cv::Matx33d> rotation_matrix_vec_;
+    std::vector<cv::Matx34d> camera_matrix_vec_;
 
     // private member functions
     void setModelType(const Photo& photo);
@@ -156,7 +159,11 @@ public:
     cv::Vec2d getPixelFocalLengths() const;
     cv::Vec2d getPrincipalPoint() const;
     cv::Mat getDistortCoeff() const;
-    cv::Matx33d getIntrinsicMatrix () const;
+    cv::Matx33d getIntrinsicMatrix() const;
+    void setTranslationRotationAndCameraMatrixVec();
+    std::vector<cv::Vec3d> getTranslationVec() const;
+    std::vector<cv::Matx33d> getRotationMatrixVec() const;
+    std::vector<cv::Matx34d> getCameraMatrixVec() const;
     bool readFromFiles(const std::vector<std::string>);
 };  // class PhotoList
 

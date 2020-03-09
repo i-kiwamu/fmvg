@@ -2,6 +2,7 @@
 add_library(fmvg SHARED
     photo.cc
     matcher.cc
+    # bundle_adjuster.cc
 )
 
 # Options
