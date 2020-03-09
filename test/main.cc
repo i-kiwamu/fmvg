@@ -66,8 +66,8 @@ int main(int argc, char** argv) {
     // cv::destroyAllWindows();
 
     // matches
-    std::map<std::pair<int,int>, std::vector<cv::DMatch>> matched_map;
-    fmvg::matchAll(photos, matched_map);
+    fmvg::SfM sfm(photos);
+    sfm.runSfM();
     // cout << matched_points_vec[0] << endl;
 
     // bundle adjustment

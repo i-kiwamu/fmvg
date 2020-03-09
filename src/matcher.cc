@@ -17,7 +17,22 @@ using std::endl;
 
 namespace fmvg {
 
-void detectFeatures(
+void SfM::initializeSfM(const PhotoList& input_photo_list) {
+    photo_list_ = input_photo_list;
+
+    // detect features
+    std::vector<cv::KeyPoint> key_points;
+    cv::Mat descriptor;
+    for (auto p : photo_list_) {
+        detectFeatures(p, key_points, descriptor);
+        key_points_vec_.push_back(key_points);
+        descriptor_vec_.push_back(descriptor);
+    }
+}  // SfM::initializeSfM
+
+
+// detect features by BRISK
+void SfM::detectFeatures(
     const Photo& photo,
     std::vector<cv::KeyPoint>& key_points,
     cv::OutputArray descriptor
@@ -31,10 +46,11 @@ void detectFeatures(
     );
     if (brisk->descriptorType() != CV_32F)
         descriptor.getMat().convertTo(descriptor, CV_32F);
-}  //detectFeatures
+}  // SfM::detectFeatures
 
 
-std::vector<cv::DMatch> matchWithRatioTest(
+// match two photos with Lowe's ratio test
+std::vector<cv::DMatch> SfM::matchWithRatioTest(
     const cv::DescriptorMatcher* matcher,
     const cv::Mat& descriptor1,
     const cv::Mat& descriptor2
@@ -53,23 +69,21 @@ std::vector<cv::DMatch> matchWithRatioTest(
             matched_vec.push_back(x);
         }
     }
-    matched_vec.shrink_to_fit();
-
     return matched_vec;
-}
+}  // SfM::matchWithRatioTest
 
-std::vector<cv::DMatch> matchTwoPhotos(
+
+// match two photos with reciprocity filter & RANSAC
+std::vector<cv::DMatch> SfM::matchTwoPhotos(
     const cv::DescriptorMatcher* matcher,
     int i,
-    int j,
-    const std::vector<std::vector<cv::KeyPoint>>& keypoints_vec,
-    const std::vector<cv::Mat>& descriptor_vec
+    int j
 ) {
     // target KeyPoint and descriptor for photo i & j
-    std::vector<cv::KeyPoint> keypoints1 = keypoints_vec[i];
-    std::vector<cv::KeyPoint> keypoints2 = keypoints_vec[j];
-    cv::Mat descriptor1 = descriptor_vec[i];
-    cv::Mat descriptor2 = descriptor_vec[j];
+    std::vector<cv::KeyPoint> keypoints1 = key_points_vec_[i];
+    std::vector<cv::KeyPoint> keypoints2 = key_points_vec_[j];
+    cv::Mat descriptor1 = descriptor_vec_[i];
+    cv::Mat descriptor2 = descriptor_vec_[j];
 
     std::vector<cv::DMatch> matched_vec = \
         matchWithRatioTest(matcher, descriptor1, descriptor2);
@@ -114,7 +128,6 @@ std::vector<cv::DMatch> matchTwoPhotos(
                 matched_vec_epi.push_back(matched_vec_merged[m]);
         }
     }
-    matched_vec_epi.shrink_to_fit();
 
     cout << "Matching " + std::to_string(i) + " and "
          << std::to_string(j) + ": "
@@ -123,15 +136,12 @@ std::vector<cv::DMatch> matchTwoPhotos(
          << std::to_string(matched_vec.size()) << endl;
 
     return matched_vec_epi;
-}  // matchTwoPhotos
+}  // SfM::matchTwoPhotos
 
-void matchAll(
-    const PhotoList& photos,
-    std::map<std::pair<int,int>, std::vector<cv::DMatch>>& matched_map
-) {
-    int n_photos = photos.getNumPhotos();
-    std::vector<std::vector<cv::KeyPoint>> key_points_vec(n_photos);
-    std::vector<cv::Mat> descriptor_vec(n_photos);
+
+// match all photos
+void SfM::matchAll() {
+    int n_photos = photo_list_.getNumPhotos();
 
     // search matches by FLANN (k nearest neighbors method)
     auto matcher = cv::DescriptorMatcher::create(
@@ -139,33 +149,27 @@ void matchAll(
     );
 
     for (int i = 0; i < n_photos-1; ++i) {
-        if (key_points_vec[i].empty()) {
+        if (key_points_vec_[i].empty()) {
             detectFeatures(
-                photos.getPhotoVector()[i],
-                key_points_vec[i],
-                descriptor_vec[i]
+                photo_list_.getPhotoVector()[i],
+                key_points_vec_[i],
+                descriptor_vec_[i]
             );
         }
         for (int j = i+1; j < n_photos; ++j) {
-            if (key_points_vec[j].empty()) {
+            if (key_points_vec_[j].empty()) {
                 detectFeatures(
-                    photos.getPhotoVector()[j],
-                    key_points_vec[j],
-                    descriptor_vec[j]
+                    photo_list_.getPhotoVector()[j],
+                    key_points_vec_[j],
+                    descriptor_vec_[j]
                 );
             }
             std::vector<cv::DMatch> match_ij = \
-                matchTwoPhotos(
-                    matcher,
-                    i,
-                    j,
-                    key_points_vec,
-                    descriptor_vec
-                );
-            matched_map[std::make_pair(i,j)] = match_ij;
+                matchTwoPhotos(matcher, i, j);
+            matched_map_[std::make_pair(i,j)] = match_ij;
         }
     }
-}  // matchAll
+}  // SfM::matchAll
 
 
 // void buildTracks(
@@ -193,4 +197,9 @@ void matchAll(
 //     }
 
 // }
+
+// run SfM
+void SfM::runSfM() {
+    matchAll();
+}  // SfM::runSfM
 }  // namespace fmvg
