@@ -11,11 +11,14 @@ class SfM {
     std::map<std::pair<int,int>, std::vector<cv::DMatch>> matched_map_;
     std::vector<cv::Vec2d> matched_points_photo_vec_;
     std::vector<cv::Vec3d> matched_points_world_vec_;
+    std::vector<cv::Mat> tracks_;
+    std::vector<cv::Mat> points3d_;
     std::vector<cv::Vec3d> point_cloud_;
     std::vector<cv::Vec3b> point_cloud_color_;
+    bool saveDebug_;
 
     // private member functions
-    void initializeSfM(const PhotoList& input_photo_list);
+    void initializeSfM(const PhotoList& input_photo_list, const bool saveDebug);
     void detectFeatures(
         const Photo& photo,
         std::vector<cv::KeyPoint>& key_points,
@@ -32,13 +35,14 @@ class SfM {
     );
     void matchAll();
     void buildTracks();
+    bool reconstructFromTracks();
 
 
 public:
     // constructor
     SfM() {}
-    SfM(const PhotoList& input_photo_list) {
-        initializeSfM(input_photo_list);
+    SfM(const PhotoList& input_photo_list, const bool saveDebug) {
+        initializeSfM(input_photo_list, saveDebug);
     };
 
     // public member functions

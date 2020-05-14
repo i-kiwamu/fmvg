@@ -66,7 +66,7 @@ int main(int argc, char** argv) {
     // cv::destroyAllWindows();
 
     // matches
-    fmvg::SfM sfm(photos);
+    fmvg::SfM sfm(photos, true);
     sfm.runSfM();
     // cout << matched_points_vec[0] << endl;
 

@@ -9,6 +9,7 @@ add_library(fmvg SHARED
 set(CMAKE_MACOSX_RPATH 1)
 find_package(OpenCV REQUIRED)
 find_package(Exiv2 REQUIRED)
+find_package(Ceres REQUIRED)
 target_compile_features(fmvg PUBLIC cxx_std_11)
 target_include_directories(fmvg INTERFACE
     ./
